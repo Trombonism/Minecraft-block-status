@@ -12,7 +12,7 @@ mcd = minecraft_data("1.13.2")
 class ChunkProtocol(SpawningClientProtocol):
 
     def packet_chunk_data(self, buff):
-        # Create dictionary mapping from block states to block names
+
 
         count = 0
         blockList = {}
@@ -20,9 +20,13 @@ class ChunkProtocol(SpawningClientProtocol):
         bitmask = buff.unpack_varint()
         # heightmap = buff.unpack_nbt()  # added in 1.14
         sections, biomes = unpack_chunk(buff, bitmask)
+
+        # If not the desired packet, read the rest of the packet and go to the next one, else, parse the block data
         if (x + 1) * 16 < self.x or (z + 1) * 16 < self.z:
             block_entities = [buff.unpack_nbt() for _ in range(buff.unpack_varint())]
             return
+
+        # Create dictionary mapping from block states to block names
         states = {}
         for i in mcd.blocks:
             index = mcd.blocks[i]
@@ -34,11 +38,15 @@ class ChunkProtocol(SpawningClientProtocol):
             else:
                 for x in range(min, max + 1):
                     states[x] = name
+
+        # Finds the starting coordinate of the chunk blocks
         startrealx = (x * 16)
         startrealz = (z * 16)
         realx = startrealx
         realz = startrealz
         realy = 0
+
+        # Parses through each block of the chunk for each section until the desired block is found
         for i in sections:
             if i is None:
                 break
@@ -62,12 +70,11 @@ class ChunkProtocol(SpawningClientProtocol):
                 if realz == startrealz + 16:
                     realz = startrealz
                     realy = realy + 1
-        #     print(count)
-        # print(blockList)
-        # print("x: " + str(x*16) + ", z: " + str(z*16))
 
+        # Finishes emptying the buffer
         block_entities = [buff.unpack_nbt() for _ in range(buff.unpack_varint())]
 
+    # Transfers (x, y, z) coordinates to the protocol
     def addCoordinates(self, x, y, z):
         self.x = int(x)
         self.y = int(y)
